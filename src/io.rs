@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 
 use crate::io::ArgsError::{ImageDimensions, ImageFile, MeshFile};
 
+#[derive(Debug)]
 pub struct Args {
     mesh_file: String,
     image_file: String,
@@ -11,20 +12,27 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(mut args: std::env::Args) -> Result<Args, ArgsError> {
-        let input_mesh = args.next().ok_or(MeshFile)?; //a missing argument
-        let input_image = args.next().ok_or(ImageFile)?;
-        let width = args
+    pub fn help<'a>() -> &'a str {
+        "Usage: rusterizer Meshfile Imagefile image_width image_height [-w | --wireframe]"
+    }
+}
+
+impl Args {
+    pub fn new(args: std::env::Args) -> Result<Args, ArgsError> {
+        let mut iter = args.skip(1); //skip over the name of the executable.
+        let input_mesh = iter.next().ok_or(MeshFile)?; //a missing argument
+        let input_image = iter.next().ok_or(ImageFile)?;
+        let width = iter
             .next()
             .ok_or(ImageDimensions("width missing"))?
             .parse::<NonZeroU32>()
             .map_err(|_| ImageDimensions("width invalid"))?;
-        let height = args
+        let height = iter
             .next()
             .ok_or(ImageDimensions("height missing"))?
             .parse::<NonZeroU32>()
             .map_err(|_| ImageDimensions("height invalid"))?;
-        let input_mode = match args.next().unwrap_or_default().as_str() {
+        let input_mode = match iter.next().unwrap_or_default().as_str() {
             "--wireframe" | "-w" => Ok(Mode::Wireframe),
             "" => Ok(Mode::Depth),
             _ => Err(ArgsError::Mode), //something was there, but not a valid argument.
@@ -40,6 +48,7 @@ impl Args {
     }
 }
 
+#[derive(Debug)]
 pub enum ArgsError {
     MeshFile,
     ImageFile,
@@ -47,6 +56,7 @@ pub enum ArgsError {
     Mode,
 }
 
+#[derive(Debug)]
 enum Mode {
     Depth,
     Wireframe,

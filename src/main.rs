@@ -4,7 +4,15 @@ mod io;
 
 fn main() {
     //command arguments: meshfile imagefile imagewidth imageheight mode
-    let args = io::Args::new(std::env::args());
+    let args = match io::Args::new(std::env::args()){
+        Ok(args) => args,
+        Err(e) => {
+            eprintln!("An error occurred during command line parsing: {:#?}",e);
+            eprintln!("{}",io::Args::help());
+            std::process::exit(1);},
+    };
+
+
 
     //extract information from the mesh file, resize if necessary
     //store triangle's indices and vertex positions into packed data structures.

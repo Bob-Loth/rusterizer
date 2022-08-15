@@ -1,5 +1,10 @@
+extern crate core;
+
+mod io;
+
 fn main() {
     //command arguments: meshfile imagefile imagewidth imageheight mode
+    let args = io::Args::new(std::env::args());
 
     //extract information from the mesh file, resize if necessary
     //store triangle's indices and vertex positions into packed data structures.
@@ -9,12 +14,12 @@ fn main() {
     //the actual rasterization operation.
     //Points(x,y,z)
     //for each triangle(p1, p2, p3):
-        //compute bounding box, as pair<Point, Point> or similar.
-        //pre-compute static barycentric coordinates factor.
-        //for each pixel in the bounding box:
-            //compute barycentric coordinates alpha, beta, gamma.
-            //if all (alpha, beta, gamma) >= 0 and <= 1:
-                //color according to mode.
+    //compute bounding box, as pair<Point, Point> or similar.
+    //pre-compute static barycentric coordinates factor.
+    //for each pixel in the bounding box:
+    //compute barycentric coordinates alpha, beta, gamma.
+    //if all (alpha, beta, gamma) >= 0 and <= 1:
+    //color according to mode.
 
     //write out the data to an output file.
 }

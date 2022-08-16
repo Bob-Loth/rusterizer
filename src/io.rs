@@ -3,22 +3,22 @@ use std::num::NonZeroU32;
 use crate::io::ArgsError::{ImageDimensions, ImageFile, MeshFile};
 
 #[derive(Debug)]
-pub struct Args {
-    mesh_file: String,
+pub(crate) struct Args {
+    pub(crate) mesh_file: String,
     image_file: String,
-    image_width: NonZeroU32,
-    image_height: NonZeroU32,
+    pub(crate) image_width: NonZeroU32,
+    pub(crate) image_height: NonZeroU32,
     mode: Mode,
 }
 
 impl Args {
-    pub fn help<'a>() -> &'a str {
+    pub(crate) fn help<'a>() -> &'a str {
         "Usage: rusterizer Meshfile Imagefile image_width image_height [-w | --wireframe]"
     }
 }
 
 impl Args {
-    pub fn new(args: std::env::Args) -> Result<Args, ArgsError> {
+    pub(crate) fn new(args: std::env::Args) -> Result<Args, ArgsError> {
         let mut iter = args.skip(1); //skip over the name of the executable.
         let input_mesh = iter.next().ok_or(MeshFile)?; //a missing argument
         let input_image = iter.next().ok_or(ImageFile)?;
@@ -49,7 +49,7 @@ impl Args {
 }
 
 #[derive(Debug)]
-pub enum ArgsError {
+pub(crate) enum ArgsError {
     MeshFile,
     ImageFile,
     ImageDimensions(&'static str),
@@ -63,7 +63,7 @@ enum Mode {
 }
 
 #[cfg(test)]
-mod struct_initialization {
+mod tests {
     use super::*;
 
     #[test]

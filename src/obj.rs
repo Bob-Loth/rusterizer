@@ -73,17 +73,7 @@ fn resize_obj(obj: &[Model]) {
             min_x, max_x, min_y, max_y, min_z, max_z
         );
         let min_max_values = get_min_max_chunks(model);
-        assert_eq!(
-            MinMaxValues {
-                min_x,
-                min_y,
-                min_z,
-                max_x,
-                max_y,
-                max_z,
-            },
-            min_max_values
-        )
+
     }
     //from these, compute necessary shift and scale for each dimension
 
@@ -115,7 +105,7 @@ fn print_obj(obj: &[Model]) {
         // Normals and texture coordinates are also loaded, but not printed in this example
         println!("model[{}].vertices: {}", i, mesh.positions.len() / 3);
 
-        assert!(mesh.positions.len() % 3 == 0);
+        assert_eq!(mesh.positions.len() % 3, 0);
         for v in 0..mesh.positions.len() / 3 {
             println!(
                 "    v[{}] = ({}, {}, {})",
@@ -125,5 +115,13 @@ fn print_obj(obj: &[Model]) {
                 mesh.positions[3 * v + 2]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn chunked_access_eq_to_skipping_access(){
+
     }
 }

@@ -89,15 +89,15 @@ impl PixelTransform {
             let vv_diff = vv_max - vv_min;
 
             Ok(PixelTransform {
-                shift: -vv_min * (pixel_extent.get() as f32 - 1.0) / vv_diff,
-                scale: (pixel_extent.get() as f32 - 1.0) / vv_diff,
+                shift: vv_max * (pixel_extent.get() as f32 - 1.0) / vv_diff,
+                scale: (pixel_extent.get() as f32) / vv_diff,
             })
         }
     }
 
     //flooring operation.
     fn window_to_pixel(&self, window_coord: f32) -> i32 {
-        (self.scale * window_coord) as i32 + self.shift as i32
+        ((self.scale * window_coord).round() + self.shift) as i32
     }
 }
 
@@ -114,14 +114,14 @@ mod tests {
         #[test]
         fn pixel_bigger() {
             let p = PixelTransform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
-            assert_eq!(p.shift, 99.0 / 2.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
-            assert_eq!(p.scale, 99.0 / 1.0); //the number of pixels divided by the full extent of the viewing volume
+            assert_eq!(p.shift, 49.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
+            assert_eq!(p.scale, 100.0); //the number of pixels divided by the full extent of the viewing volume
         }
         #[test]
         fn pixel_smaller() {
             let p = PixelTransform::new(NonZeroU32::new(40).unwrap(), -50.0, 50.0).unwrap();
-            assert_eq!(p.shift, 39.0 / 2.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
-            assert_eq!(p.scale, 39.0 / 100.0); //the number of pixels divided by the full extent of the viewing volume
+            assert_eq!(p.shift, 19.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
+            assert_eq!(p.scale, 0.4); //the number of pixels divided by the full extent of the viewing volume
         }
         // Occurrence implies a bad implementation of viewing volume, or a programming error in passing its data to PixelTransform::new().
         #[test]
@@ -167,12 +167,21 @@ mod tests {
             is_square(space.view_volume);
         }
         #[test]
-        fn space_rect_init() {
-            let space =
-                Space::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(50).unwrap()).unwrap();
-            //assert_eq!(space.x_transform.scale, space.y_transform.scale);
-            assert_eq!(space.x_transform.shift * 2.0 + 1.0, (space.y_transform.shift * 2.0 + 1.0) * 2.0);
-            assert_eq!(space.x_transform.scale, space.y_transform.scale);
+        fn window_to_pixel() {
+                let space =
+                    Space::new(NonZeroU32::new(200).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
+                //assert_eq!(space.x_transform.scale, space.y_transform.scale);
+                let dimension_ratio = 2.0;
+                assert_eq!(space.x_transform.shift * 2.0 + 1.0, (space.y_transform.shift * 2.0 + 1.0) * dimension_ratio);
+                let min_pic = -dimension_ratio;
+                let min_vv = -1.0;
+                let max_vv = 1.0;
+                let max_pic = dimension_ratio;
+                assert_eq!(space.x_transform.window_to_pixel(min_pic), 0);
+                assert_eq!(space.x_transform.window_to_pixel(min_vv), (199f32 * 0.25).floor() as i32);
+                assert_eq!(space.x_transform.window_to_pixel(max_vv), (199f32 * 0.75).floor() as i32);
+                assert_eq!(space.x_transform.window_to_pixel(max_pic), 199);
+
         }
     }
 }

@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use tobj::load_obj;
 use tobj::Model;
 
@@ -12,13 +11,6 @@ pub(crate) fn get_mesh_data(handle: &str) -> Vec<Model> {
 }
 
 fn get_min_max(model: &Model, offset: usize) -> (f32, f32) {
-    let min_x = f32::MAX;
-    let min_y = f32::MAX;
-    let min_z = f32::MAX;
-    let max_x = -f32::MAX;
-    let max_y = -f32::MAX;
-    let max_z = -f32::MAX;
-
     model
         .mesh
         .positions
@@ -80,17 +72,17 @@ fn resize_obj(obj: &[Model]) {
             "{} {} {} {} {} {}",
             min_x, max_x, min_y, max_y, min_z, max_z
         );
-        let c = get_min_max_chunks(model);
+        let min_max_values = get_min_max_chunks(model);
         assert_eq!(
             MinMaxValues {
-                min_x: min_x,
-                min_y: min_y,
-                min_z: min_z,
-                max_x: max_x,
-                max_y: max_y,
-                max_z: max_z,
+                min_x,
+                min_y,
+                min_z,
+                max_x,
+                max_y,
+                max_z,
             },
-            c
+            min_max_values
         )
     }
     //from these, compute necessary shift and scale for each dimension

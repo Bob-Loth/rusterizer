@@ -109,6 +109,8 @@ mod tests {
     mod pixel_transform {
         use super::{NonZeroU32, PixelTransform};
         use crate::space::PixelTransformError::BadViewVolume;
+        use crate::space::{Space, ViewVolume};
+
         #[test]
         fn pixel_bigger() {
             let p = PixelTransform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
@@ -126,6 +128,51 @@ mod tests {
         fn bad_input() {
             let p = PixelTransform::new(NonZeroU32::new(100).unwrap(), -10.0, 11.0);
             assert_eq!(p, Err(BadViewVolume))
+        }
+        #[test]
+        fn view_volume_width_bigger() {
+            let vv = ViewVolume::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(50).unwrap());
+            assert_ne!(vv.bottom, vv.left);
+            assert_eq!(vv.bottom, -1.0);
+            assert_eq!(vv.right, 2.0);
+        }
+
+        #[test]
+        fn view_volume_height_bigger() {
+            let vv = ViewVolume::new(NonZeroU32::new(40).unwrap(), NonZeroU32::new(50).unwrap());
+            assert_ne!(vv.bottom, vv.left);
+            assert_eq!(vv.bottom, -1.25);
+            assert_eq!(vv.right, 1.0);
+        }
+
+        fn is_square(vv: ViewVolume) {
+            assert_eq!(vv.top, -vv.left); //eq this time
+            assert_eq!(vv.top, vv.right);
+            assert_eq!(vv.top, -vv.bottom);
+            assert_eq!(vv.top, 1.0);
+        }
+
+        #[test]
+        fn view_volume_dimensions_same() {
+            let vv = ViewVolume::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(100).unwrap());
+            is_square(vv);
+        }
+
+        #[test]
+        fn space_square_init() {
+            let space =
+                Space::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
+            assert_eq!(space.x_transform.scale, space.y_transform.scale);
+            assert_eq!(space.x_transform.shift, space.y_transform.shift);
+            is_square(space.view_volume);
+        }
+        #[test]
+        fn space_rect_init() {
+            let space =
+                Space::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(50).unwrap()).unwrap();
+            //assert_eq!(space.x_transform.scale, space.y_transform.scale);
+            assert_eq!(space.x_transform.shift * 2.0 + 1.0, (space.y_transform.shift * 2.0 + 1.0) * 2.0);
+            assert_eq!(space.x_transform.scale, space.y_transform.scale);
         }
     }
 }

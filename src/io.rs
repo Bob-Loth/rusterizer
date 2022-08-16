@@ -1,8 +1,6 @@
 use std::num::NonZeroU32;
 
-use crate::io::ArgsError::{ImageDimensions, ImageFile, MeshFile};
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Args {
     pub(crate) mesh_file: String,
     image_file: String,
@@ -19,44 +17,53 @@ impl Args {
 
 impl Args {
     pub(crate) fn new(args: std::env::Args) -> Result<Args, ArgsError> {
-        let mut iter = args.skip(1); //skip over the name of the executable.
-        let input_mesh = iter.next().ok_or(MeshFile)?; //a missing argument
-        let input_image = iter.next().ok_or(ImageFile)?;
-        let width = iter
-            .next()
-            .ok_or(ImageDimensions("width missing"))?
+        let unstructured_args: Vec<String> = args.collect();
+        Self::structure_args(&unstructured_args)
+    }
+
+    fn structure_args<T: AsRef<str>>(args: &[T]) -> Result<Args, ArgsError> {
+        if !(args.len() == 5 || args.len() == 6) {
+            //neither nor
+            return Err(ArgsError::BadLength);
+        }
+
+        let input_mesh = args[1].as_ref();
+        let input_image = args[2].as_ref();
+        let width = args[3]
+            .as_ref()
             .parse::<NonZeroU32>()
-            .map_err(|_| ImageDimensions("width invalid"))?;
-        let height = iter
-            .next()
-            .ok_or(ImageDimensions("height missing"))?
+            .map_err(|_| ArgsError::ImageDimensions("width invalid"))?;
+        let height = args[4]
+            .as_ref()
             .parse::<NonZeroU32>()
-            .map_err(|_| ImageDimensions("height invalid"))?;
-        let input_mode = match iter.next().unwrap_or_default().as_str() {
-            "--wireframe" | "-w" => Ok(Mode::Wireframe),
-            "" => Ok(Mode::Depth),
-            _ => Err(ArgsError::Mode), //something was there, but not a valid argument.
-        }?;
+            .map_err(|_| ArgsError::ImageDimensions("height invalid"))?;
+        let mode = if args.len() == 6 {
+            match args[5].as_ref() {
+                "--wireframe" | "-w" => Ok(Mode::Wireframe),
+                _ => Err(ArgsError::BadMode), //something was there, but not a valid argument.
+            }?
+        } else {
+            Mode::Depth
+        };
 
         Ok(Args {
-            mesh_file: input_mesh,
-            image_file: input_image,
+            mesh_file: String::from(input_mesh),
+            image_file: String::from(input_image),
             image_width: width,
             image_height: height,
-            mode: input_mode,
+            mode,
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum ArgsError {
-    MeshFile,
-    ImageFile,
+    BadLength,
     ImageDimensions(&'static str),
-    Mode,
+    BadMode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Mode {
     Depth,
     Wireframe,
@@ -76,27 +83,50 @@ mod tests {
             mode: Mode::Wireframe,
         };
     }
+
     #[test]
-    #[should_panic]
+    fn invalid_height() {
+        let raw_args = vec!["name", "a", "b", "1", "-1"];
+        let args = Args::structure_args(&raw_args);
+        assert_eq!(args, Err(ArgsError::ImageDimensions("height invalid")));
+    }
+
+    #[test]
     fn invalid_width() {
-        let args = Args {
-            mesh_file: String::from("a.obj"),
-            image_file: String::from("a.png"),
-            image_width: NonZeroU32::new(0).unwrap(),
-            image_height: NonZeroU32::new(1).unwrap(),
-            mode: Mode::Wireframe,
-        };
+        let raw_args = vec!["name", "a", "b", "0", "1"];
+        let args = Args::structure_args(&raw_args);
+        assert_eq!(args, Err(ArgsError::ImageDimensions("width invalid")));
+    }
+
+    #[test]
+    fn invalid_mode() {
+        let raw_args1 = vec!["name", "a", "b", "1", "1", ""];
+        let args1 = Args::structure_args(&raw_args1);
+        assert_eq!(args1, Err(ArgsError::BadMode));
+
+        let raw_args2 = vec!["name", "a", "b", "1", "1", "garbage"];
+        let args2 = Args::structure_args(&raw_args2);
+        assert_eq!(args2, Err(ArgsError::BadMode));
+    }
+
+    #[test]
+    fn wireframe_short() {
+        let raw_args = vec!["name", "a", "b", "1", "1", "-w"];
+        let args = Args::structure_args(&raw_args);
+        assert_eq!(args.unwrap().mode, Mode::Wireframe);
     }
     #[test]
-    #[should_panic]
-    fn invalid_height() {
-        let args = Args {
-            mesh_file: String::from("a.obj"),
-            image_file: String::from("a.png"),
-            image_width: NonZeroU32::new(1).unwrap(),
-            image_height: NonZeroU32::new(0).unwrap(),
-            mode: Mode::Wireframe,
-        };
+    fn wireframe_fully_qualified() {
+        let raw_args = vec!["name", "a", "b", "1", "1", "--wireframe"];
+        let args = Args::structure_args(&raw_args);
+        assert_eq!(args.unwrap().mode, Mode::Wireframe)
+    }
+
+    #[test]
+    fn depth() {
+        let raw_args = vec!["name", "a", "b", "1", "1"];
+        let args = Args::structure_args(&raw_args);
+        assert_eq!(args.unwrap().mode, Mode::Depth);
     }
 
     #[test]

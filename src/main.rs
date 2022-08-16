@@ -1,19 +1,36 @@
 extern crate core;
 
-mod io;
+use crate::obj::get_mesh_data;
+use std::num::NonZeroU32;
 
-fn main() {
-    //command arguments: meshfile imagefile imagewidth imageheight mode
-    let args = match io::Args::new(std::env::args()) {
+mod io;
+mod obj;
+mod space;
+
+fn parse_cmd() -> io::Args {
+    match io::Args::new(std::env::args()) {
         Ok(args) => args,
         Err(e) => {
             eprintln!("An error occurred during command line parsing: {:#?}", e);
             eprintln!("{}", io::Args::help());
             std::process::exit(1);
         }
-    };
+    }
+}
 
-    //extract information from the mesh file, resize if necessary
+//the panic indicates a bug in error-handling for parse_cmd, or in Space's constructor.
+fn create_space_transforms(width: NonZeroU32, height: NonZeroU32) -> space::Space {
+    match space::Space::new(width, height) {
+        Ok(space) => space,
+        Err(e) => panic!("An error occurred during view volume creation: {:#?}", e),
+    }
+}
+
+fn main() {
+    let args = parse_cmd();
+    let space = create_space_transforms(args.image_width, args.image_height);
+    let models = get_mesh_data(&args.mesh_file);
+
     //store triangle's indices and vertex positions into packed data structures.
 
     //maintain a z buffer, a 2d structure to store depth information per pixel.

@@ -1,6 +1,8 @@
 use tobj::load_obj;
 use tobj::Model;
 
+
+
 pub(crate) fn get_mesh_data(handle: &str) -> Vec<Model> {
     let (models, _mats_result) =
         load_obj(handle, &tobj::LoadOptions::default()).expect("obj load error");
@@ -22,45 +24,6 @@ fn get_min_max(model: &Model, offset: usize) -> (f32, f32) {
         })
 }
 
-#[derive(PartialEq, Debug)]
-struct MinMaxValues {
-    min_x: f32,
-    min_y: f32,
-    min_z: f32,
-    max_x: f32,
-    max_y: f32,
-    max_z: f32,
-}
-
-impl Default for MinMaxValues {
-    fn default() -> Self {
-        MinMaxValues {
-            min_x: f32::MAX,
-            min_y: f32::MAX,
-            min_z: f32::MAX,
-            max_x: f32::MIN,
-            max_y: f32::MIN,
-            max_z: f32::MIN,
-        }
-    }
-}
-
-fn get_min_max_chunks(model: &Model) -> MinMaxValues {
-    let x = model
-        .mesh
-        .positions
-        .chunks_exact(3)
-        .fold(MinMaxValues::default(), |mut acc, p| {
-            acc.max_x = p[0].max(acc.max_x);
-            acc.max_y = p[1].max(acc.max_y);
-            acc.max_z = p[2].max(acc.max_z);
-            acc.min_x = p[0].min(acc.min_x);
-            acc.min_y = p[1].min(acc.min_y);
-            acc.min_z = p[2].min(acc.min_z);
-            acc
-        });
-    x
-}
 
 fn resize_obj(obj: &[Model]) {
     //find min and max of each dimension x,y,z
@@ -68,11 +31,6 @@ fn resize_obj(obj: &[Model]) {
         let (min_x, max_x) = get_min_max(model, 0);
         let (min_y, max_y) = get_min_max(model, 1);
         let (min_z, max_z) = get_min_max(model, 2);
-        println!(
-            "{} {} {} {} {} {}",
-            min_x, max_x, min_y, max_y, min_z, max_z
-        );
-        let min_max_values = get_min_max_chunks(model);
 
     }
     //from these, compute necessary shift and scale for each dimension
@@ -120,8 +78,33 @@ fn print_obj(obj: &[Model]) {
 
 #[cfg(test)]
 mod tests {
+    use criterion::Criterion;
+    use tobj::{load_obj, LoadOptions, Model};
+    use crate::obj::get_min_max;
     #[test]
     fn chunked_access_eq_to_skipping_access(){
-
+        let (obj, _mats) = load_obj("./tests/resources/teapot.obj", &LoadOptions::default()).unwrap();
+        for model in obj.iter() {
+            let (min_x, max_x) = get_min_max(model, 0);
+            let (min_y, max_y) = get_min_max(model, 1);
+            let (min_z, max_z) = get_min_max(model, 2);
+            println!(
+                "{} {} {} {} {} {}",
+                min_x, max_x, min_y, max_y, min_z, max_z
+            );
+        }
     }
+
+    #[test]
+    fn bench_skip(){
+        let (obj,_mats) = load_obj("./tests/resources/teapot.obj",&LoadOptions::default()).unwrap();
+
+        for model in obj.iter() {
+            let (min_x, max_x) = get_min_max(model, 0);
+            let (min_y, max_y) = get_min_max(model, 1);
+            let (min_z, max_z) = get_min_max(model, 2);
+        }
+    }
+
+
 }

@@ -4,8 +4,8 @@ use SpaceError::Init;
 #[derive(Debug)]
 pub struct Space {
     view_volume: ViewVolume,
-    x_transform: PixelTransform,
-    y_transform: PixelTransform,
+    x_transform: Transform,
+    y_transform: Transform,
 }
 #[derive(Debug)]
 pub enum SpaceError {
@@ -17,8 +17,8 @@ impl Space {
         let vv = ViewVolume::new(width, height);
         Ok(Space {
             view_volume: vv.clone(),
-            x_transform: PixelTransform::new(width, vv.left, vv.right).map_err(|_| Init)?,
-            y_transform: PixelTransform::new(height, vv.bottom, vv.top).map_err(|_| Init)?,
+            x_transform: Transform::new(width, vv.left, vv.right).map_err(|_| Init)?,
+            y_transform: Transform::new(height, vv.bottom, vv.top).map_err(|_| Init)?,
         })
     }
     pub fn window_to_pixel(&self, x_window: f32, y_window: f32, z_window: f32) -> Fragment {
@@ -31,6 +31,7 @@ impl Space {
 }
 
 //a pixel with depth
+#[derive(Clone)]
 pub struct Fragment {
     x: i32,
     y: i32,
@@ -68,27 +69,27 @@ impl ViewVolume {
 
 //generates and contains shift and scale factors, given a pixel extent in a given dimension (height or width), and the viewing volume in that dimension.
 #[derive(Debug, PartialEq)]
-struct PixelTransform {
-    shift: f32,
-    scale: f32,
+pub struct Transform {
+    pub(crate) shift: f32,
+    pub(crate) scale: f32,
 }
 #[derive(Debug, PartialEq)]
 pub(crate) enum PixelTransformError {
     BadViewVolume,
 }
 
-impl PixelTransform {
+impl Transform {
     fn new(
         pixel_extent: NonZeroU32,
         vv_min: f32,
         vv_max: f32,
-    ) -> Result<PixelTransform, PixelTransformError> {
+    ) -> Result<Transform, PixelTransformError> {
         if -vv_min != vv_max {
             Err(PixelTransformError::BadViewVolume)
         } else {
             let vv_diff = vv_max - vv_min;
 
-            Ok(PixelTransform {
+            Ok(Transform {
                 shift: vv_max * (pixel_extent.get() as f32 - 1.0) / vv_diff,
                 scale: (pixel_extent.get() as f32) / vv_diff,
             })
@@ -103,30 +104,30 @@ impl PixelTransform {
 
 #[cfg(test)]
 mod tests {
-    use crate::space::PixelTransform;
+    use crate::space::Transform;
     use std::num::NonZeroU32;
 
     mod pixel_transform {
-        use super::{NonZeroU32, PixelTransform};
+        use super::{NonZeroU32, Transform};
         use crate::space::PixelTransformError::BadViewVolume;
         use crate::space::{Space, ViewVolume};
 
         #[test]
         fn pixel_bigger() {
-            let p = PixelTransform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
+            let p = Transform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
             assert_eq!(p.shift, 49.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 100.0); //the number of pixels divided by the full extent of the viewing volume
         }
         #[test]
         fn pixel_smaller() {
-            let p = PixelTransform::new(NonZeroU32::new(40).unwrap(), -50.0, 50.0).unwrap();
+            let p = Transform::new(NonZeroU32::new(40).unwrap(), -50.0, 50.0).unwrap();
             assert_eq!(p.shift, 19.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 0.4); //the number of pixels divided by the full extent of the viewing volume
         }
         // Occurrence implies a bad implementation of viewing volume, or a programming error in passing its data to PixelTransform::new().
         #[test]
         fn bad_input() {
-            let p = PixelTransform::new(NonZeroU32::new(100).unwrap(), -10.0, 11.0);
+            let p = Transform::new(NonZeroU32::new(100).unwrap(), -10.0, 11.0);
             assert_eq!(p, Err(BadViewVolume))
         }
         #[test]
@@ -168,20 +169,28 @@ mod tests {
         }
         #[test]
         fn window_to_pixel() {
-                let space =
-                    Space::new(NonZeroU32::new(200).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
-                //assert_eq!(space.x_transform.scale, space.y_transform.scale);
-                let dimension_ratio = 2.0;
-                assert_eq!(space.x_transform.shift * 2.0 + 1.0, (space.y_transform.shift * 2.0 + 1.0) * dimension_ratio);
-                let min_pic = -dimension_ratio;
-                let min_vv = -1.0;
-                let max_vv = 1.0;
-                let max_pic = dimension_ratio;
-                assert_eq!(space.x_transform.window_to_pixel(min_pic), 0);
-                assert_eq!(space.x_transform.window_to_pixel(min_vv), (199f32 * 0.25).floor() as i32);
-                assert_eq!(space.x_transform.window_to_pixel(max_vv), (199f32 * 0.75).floor() as i32);
-                assert_eq!(space.x_transform.window_to_pixel(max_pic), 199);
-
+            let space =
+                Space::new(NonZeroU32::new(200).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
+            //assert_eq!(space.x_transform.scale, space.y_transform.scale);
+            let dimension_ratio = 2.0;
+            assert_eq!(
+                space.x_transform.shift * 2.0 + 1.0,
+                (space.y_transform.shift * 2.0 + 1.0) * dimension_ratio
+            );
+            let min_pic = -dimension_ratio;
+            let min_vv = -1.0;
+            let max_vv = 1.0;
+            let max_pic = dimension_ratio;
+            assert_eq!(space.x_transform.window_to_pixel(min_pic), 0);
+            assert_eq!(
+                space.x_transform.window_to_pixel(min_vv),
+                (199f32 * 0.25).floor() as i32
+            );
+            assert_eq!(
+                space.x_transform.window_to_pixel(max_vv),
+                (199f32 * 0.75).floor() as i32
+            );
+            assert_eq!(space.x_transform.window_to_pixel(max_pic), 199);
         }
     }
 }

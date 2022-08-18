@@ -31,7 +31,7 @@ fn get_mut_vertices_of_dim(model: &mut Model, offset: usize) -> StepBy<Skip<Iter
 
 //modifies mesh positions in-place to be in the range [-1,1].
 pub(crate) fn resize_obj(obj: &mut [Model]) {
-    for mut model in obj.iter_mut() {
+    for model in obj.iter_mut() {
         //find min and max of each dimension x,y,z
         let x = get_min_max(model, 0);
         let y = get_min_max(model, 1);
@@ -57,6 +57,7 @@ fn get_max_extent(x: (f32, f32), y: (f32, f32), z: (f32, f32)) -> f32 {
 impl Transform {
     fn from_extent(min: f32, extent: f32) -> Transform {
         Transform {
+            extent: extent as u32,
             scale: 2.0 / extent,
             shift: min + (extent / 2.0),
         }
@@ -124,18 +125,9 @@ mod tests {
                 "{} {} {} {} {} {}",
                 min_x, max_x, min_y, max_y, min_z, max_z
             );
-        }
-    }
-
-    #[test]
-    fn bench_skip() {
-        let (obj, _mats) =
-            load_obj("./tests/resources/teapot.obj", &LoadOptions::default()).unwrap();
-
-        for model in obj.iter() {
-            let (min_x, max_x) = get_min_max(model, 0);
-            let (min_y, max_y) = get_min_max(model, 1);
-            let (min_z, max_z) = get_min_max(model, 2);
+            assert!(min_x <= max_x);
+            assert!(min_y <= max_y);
+            assert!(min_z <= max_z);
         }
     }
 

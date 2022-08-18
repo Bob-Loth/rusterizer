@@ -1,20 +1,30 @@
+use crate::io::Args;
 use crate::obj::{get_mesh_data, resize_obj};
-use crate::space::{Fragment, Space};
+use crate::point::rasterize;
+use crate::space::Fragment;
 use array2d::Array2D;
+use png::Writer;
+
+use std::fs::File;
+use std::io::BufWriter;
 use std::num::NonZeroU32;
-use tobj::Model;
+use std::path::Path;
+use std::process;
+
+//use crate::point::rasterize;
 
 mod io;
 mod obj;
+mod point;
 mod space;
 
-fn parse_cmd() -> io::Args {
-    match io::Args::new(std::env::args()) {
+fn parse_cmd() -> Args {
+    match Args::new(std::env::args()) {
         Ok(args) => args,
         Err(e) => {
             eprintln!("An error occurred during command line parsing: {:#?}", e);
-            eprintln!("{}", io::Args::help());
-            std::process::exit(1);
+            eprintln!("{}", Args::help());
+            process::exit(1);
         }
     }
 }
@@ -24,26 +34,6 @@ fn create_space_transforms(width: NonZeroU32, height: NonZeroU32) -> space::Spac
     match space::Space::new(width, height) {
         Ok(space) => space,
         Err(e) => panic!("An error occurred during view volume creation: {:#?}", e),
-    }
-}
-
-fn assemble_triangle() {}
-
-fn rasterize(fragments: &mut Array2D<f32>, space: &Space, vertices: &[f32], indices: &[u32]) {
-    assert_eq!(indices.len() % 3, 0);
-    //for every triangle with coords x,y,z into window space
-    for fragment in indices
-        .chunks_exact(3)
-        .map(|f| {
-            (
-                vertices[f[0] as usize],
-                vertices[f[1] as usize],
-                vertices[f[2] as usize],
-            )
-        })
-        .map(|(x, y, z)| space.window_to_pixel(x, y, z))
-    {
-
     }
 }
 
@@ -63,17 +53,85 @@ fn main() {
     );
     //the actual rasterization operation.
     for model in models.iter() {
-        rasterize(&mut fragments, &space,&model.mesh.positions, &model.mesh.indices);
+        rasterize(
+            &mut fragments,
+            &space,
+            &model.mesh.positions,
+            &model.mesh.indices,
+            args.mode,
+        );
     }
 
-    //Points(x,y,z)
-    //for each triangle(p1, p2, p3):
-    //compute bounding box, as pair<Point, Point> or similar.
-    //pre-compute static barycentric coordinates factor.
-    //for each pixel in the bounding box:
-    //compute barycentric coordinates alpha, beta, gamma.
-    //if all (alpha, beta, gamma) >= 0 and <= 1:
-    //color according to mode.
+    let mut writer = get_writer(&args);
 
-    //write out the data to an output file.
+    let pixels: Vec<f32> = fragments
+        .elements_row_major_iter()
+        .map(|&f| if f > 1.0 { 1.0 } else { f })
+        .collect();
+    for p in &pixels {
+        assert!((-1.0f32..=1.0f32).contains(p));
+    }
+    assert!(pixels[0] == 1.0);
+
+    assert!(pixels.iter().last().unwrap() == &1.0);
+    let mut data = [165u8, 255u8, 214u8, 255u8]
+        .repeat((args.image_width.get() * args.image_height.get()) as usize); // An array containing a RGBA sequence.
+
+    for i in 0..pixels.len() {
+        //pixels = [-1, 1]
+        // -    -> [1 ,-1]
+        // +1   -> [2 , 0]
+        // /2   -> [1 , 0]
+        // *data-> [255,0]
+
+        data[i * 4    ] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4    ] as f32)) as u8;
+        data[i * 4 + 1] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 1] as f32)) as u8;
+        data[i * 4 + 2] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 2] as f32)) as u8;
+        data[i * 4 + 3] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 3] as f32)) as u8;
+    }
+
+    //assert_eq!(data[0..4],[0,0,0,0]);
+    //assert_eq!(data.get(data.len()-4..).unwrap(),[0,0,0,0]);
+    println!("wrote to: {}", args.image_file);
+    writer.write_image_data(&data).unwrap(); // Save
 }
+
+fn get_writer(args: &Args) -> Writer<BufWriter<File>> {
+    let path = Path::new(&args.image_file);
+    let create = File::create(path);
+    if create.is_err() {
+        eprintln!(
+            "an error happened when attempting to {}: {}",
+            args.image_file,
+            create.unwrap_err()
+        );
+        process::exit(1);
+    }
+    let w = BufWriter::new(create.unwrap());
+    let mut encoder = png::Encoder::new(w, args.image_width.get(), args.image_height.get());
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_trns(vec![0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8]);
+    encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455)); // 1.0 / 2.2, scaled by 100000
+    encoder.set_source_gamma(png::ScaledFloat::new(1.0 / 2.2)); // 1.0 / 2.2, unscaled, but rounded
+    let source_chromaticities = png::SourceChromaticities::new(
+        // Using unscaled instantiation here
+        (0.31270, 0.32900),
+        (0.64000, 0.33000),
+        (0.30000, 0.60000),
+        (0.15000, 0.06000),
+    );
+    encoder.set_source_chromaticities(source_chromaticities);
+
+    encoder.write_header().unwrap()
+    }
+//Points(x,y,z)
+//for each triangle(p1, p2, p3):
+//compute bounding box, as pair<Point, Point> or similar.
+//pre-compute static barycentric coordinates factor.
+//for each pixel in the bounding box:
+//compute barycentric coordinates alpha, beta, gamma.
+//if all (alpha, beta, gamma) >= 0 and <= 1:
+//color according to mode.
+
+//write out the data to an output file.

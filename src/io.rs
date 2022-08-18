@@ -3,10 +3,10 @@ use std::num::NonZeroU32;
 #[derive(Debug, PartialEq)]
 pub(crate) struct Args {
     pub(crate) mesh_file: String,
-    image_file: String,
+    pub(crate) image_file: String,
     pub(crate) image_width: NonZeroU32,
     pub(crate) image_height: NonZeroU32,
-    mode: Mode,
+    pub(crate) mode: Mode,
 }
 
 impl Args {
@@ -63,8 +63,8 @@ pub(crate) enum ArgsError {
     BadMode,
 }
 
-#[derive(Debug, PartialEq)]
-enum Mode {
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Mode {
     Depth,
     Wireframe,
 }
@@ -74,8 +74,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn valid_args<'a>() {
-        let args = Args {
+    fn valid_args() {
+        let _args = Args {
             mesh_file: String::from("a.obj"),
             image_file: String::from("a.png"),
             image_width: NonZeroU32::new(1).unwrap(),

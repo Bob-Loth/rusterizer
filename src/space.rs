@@ -1,9 +1,9 @@
+use crate::point::Point;
 use std::num::NonZeroU32;
 use SpaceError::Init;
 
 #[derive(Debug)]
 pub struct Space {
-    view_volume: ViewVolume,
     x_transform: Transform,
     y_transform: Transform,
 }
@@ -16,26 +16,45 @@ impl Space {
     pub fn new(width: NonZeroU32, height: NonZeroU32) -> Result<Space, SpaceError> {
         let vv = ViewVolume::new(width, height);
         Ok(Space {
-            view_volume: vv.clone(),
             x_transform: Transform::new(width, vv.left, vv.right).map_err(|_| Init)?,
             y_transform: Transform::new(height, vv.bottom, vv.top).map_err(|_| Init)?,
         })
     }
-    pub fn window_to_pixel(&self, x_window: f32, y_window: f32, z_window: f32) -> Fragment {
+    pub fn window_to_pixel(&self, point_window: Point) -> Fragment {
         Fragment {
-            x: self.x_transform.window_to_pixel(x_window),
-            y: self.y_transform.window_to_pixel(y_window),
-            z: -z_window,
+            x: self.x_transform.window_to_pixel(point_window.x),
+            y: self.y_transform.window_to_pixel(point_window.y),
+            z: -point_window.z,
         }
     }
 }
 
 //a pixel with depth
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Fragment {
-    x: i32,
-    y: i32,
-    z: f32,
+    pub(crate) x: i64,
+    pub(crate) y: i64,
+    pub(crate) z: f32,
+}
+
+impl Fragment {
+    pub(crate) fn dot(&self, rhs: Fragment) -> i64 {
+        (self.x * rhs.x) + (self.x * rhs.y)
+    }
+    pub(crate) fn dot_self(&self) -> i64 {
+        (self.x * self.x) + (self.x * self.x)
+    }
+}
+
+impl std::ops::Sub for Fragment {
+    type Output = Fragment;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Fragment {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -72,6 +91,7 @@ impl ViewVolume {
 pub struct Transform {
     pub(crate) shift: f32,
     pub(crate) scale: f32,
+    pub extent: u32,
 }
 #[derive(Debug, PartialEq)]
 pub(crate) enum PixelTransformError {
@@ -88,17 +108,17 @@ impl Transform {
             Err(PixelTransformError::BadViewVolume)
         } else {
             let vv_diff = vv_max - vv_min;
-
             Ok(Transform {
-                shift: vv_max * (pixel_extent.get() as f32 - 1.0) / vv_diff,
+                extent: pixel_extent.get(),
+                shift: vv_max * (pixel_extent.get() as f32) / vv_diff,
                 scale: (pixel_extent.get() as f32) / vv_diff,
             })
         }
     }
 
     //flooring operation.
-    fn window_to_pixel(&self, window_coord: f32) -> i32 {
-        ((self.scale * window_coord).round() + self.shift) as i32
+    fn window_to_pixel(&self, window_coord: f32) -> i64 {
+        (((self.scale * window_coord) + self.shift) as i64).clamp(0, self.extent as i64 - 1)
     }
 }
 
@@ -115,13 +135,13 @@ mod tests {
         #[test]
         fn pixel_bigger() {
             let p = Transform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
-            assert_eq!(p.shift, 49.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
+            assert_eq!(p.shift, 50.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 100.0); //the number of pixels divided by the full extent of the viewing volume
         }
         #[test]
         fn pixel_smaller() {
             let p = Transform::new(NonZeroU32::new(40).unwrap(), -50.0, 50.0).unwrap();
-            assert_eq!(p.shift, 19.5); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
+            assert_eq!(p.shift, 20.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 0.4); //the number of pixels divided by the full extent of the viewing volume
         }
         // Occurrence implies a bad implementation of viewing volume, or a programming error in passing its data to PixelTransform::new().
@@ -165,7 +185,6 @@ mod tests {
                 Space::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
             assert_eq!(space.x_transform.scale, space.y_transform.scale);
             assert_eq!(space.x_transform.shift, space.y_transform.shift);
-            is_square(space.view_volume);
         }
         #[test]
         fn window_to_pixel() {
@@ -173,10 +192,7 @@ mod tests {
                 Space::new(NonZeroU32::new(200).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
             //assert_eq!(space.x_transform.scale, space.y_transform.scale);
             let dimension_ratio = 2.0;
-            assert_eq!(
-                space.x_transform.shift * 2.0 + 1.0,
-                (space.y_transform.shift * 2.0 + 1.0) * dimension_ratio
-            );
+
             let min_pic = -dimension_ratio;
             let min_vv = -1.0;
             let max_vv = 1.0;
@@ -184,11 +200,12 @@ mod tests {
             assert_eq!(space.x_transform.window_to_pixel(min_pic), 0);
             assert_eq!(
                 space.x_transform.window_to_pixel(min_vv),
-                (199f32 * 0.25).floor() as i32
+                (200f64 * 0.25).round() as i64
             );
+
             assert_eq!(
                 space.x_transform.window_to_pixel(max_vv),
-                (199f32 * 0.75).floor() as i32
+                ((200f64 * 0.75).round() as i64)
             );
             assert_eq!(space.x_transform.window_to_pixel(max_pic), 199);
         }

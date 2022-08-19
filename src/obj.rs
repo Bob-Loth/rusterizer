@@ -8,8 +8,6 @@ use tobj::Model;
 pub(crate) fn get_mesh_data(handle: &str) -> Vec<Model> {
     let (mut models, _mats_result) =
         load_obj(handle, &tobj::LoadOptions::default()).expect("obj load error");
-
-    print_obj(&models);
     resize_obj(&mut models);
     models
 }
@@ -62,7 +60,6 @@ impl Transform {
             shift: min + (extent / 2.0),
         }
     }
-
     fn apply(&self, dimension: f32) -> f32 {
         (dimension - self.shift) * self.scale
     }

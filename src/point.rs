@@ -7,8 +7,7 @@ use barycentric::BaryCentricConstants;
 use space::Space;
 
 mod barycentric {
-    use crate::point::{Triangle, Fragment};
-
+    use crate::point::{Fragment, Triangle};
 
     //       c_______b
     //		 \  pav /

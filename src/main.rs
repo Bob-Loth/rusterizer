@@ -84,7 +84,7 @@ fn main() {
         // /2   -> [1 , 0]
         // *data-> [255,0]
 
-        data[i * 4    ] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4    ] as f32)) as u8;
+        data[i * 4] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4] as f32)) as u8;
         data[i * 4 + 1] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 1] as f32)) as u8;
         data[i * 4 + 2] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 2] as f32)) as u8;
         data[i * 4 + 3] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 3] as f32)) as u8;
@@ -124,7 +124,7 @@ fn get_writer(args: &Args) -> Writer<BufWriter<File>> {
     encoder.set_source_chromaticities(source_chromaticities);
 
     encoder.write_header().unwrap()
-    }
+}
 //Points(x,y,z)
 //for each triangle(p1, p2, p3):
 //compute bounding box, as pair<Point, Point> or similar.

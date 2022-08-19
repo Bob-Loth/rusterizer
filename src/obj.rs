@@ -8,8 +8,6 @@ use tobj::Model;
 pub(crate) fn get_mesh_data(handle: &str) -> Vec<Model> {
     let (mut models, _mats_result) =
         load_obj(handle, &tobj::LoadOptions::default()).expect("obj load error");
-
-    print_obj(&models);
     resize_obj(&mut models);
     models
 }
@@ -62,47 +60,8 @@ impl Transform {
             shift: min + (extent / 2.0),
         }
     }
-
     fn apply(&self, dimension: f32) -> f32 {
         (dimension - self.shift) * self.scale
-    }
-}
-
-fn print_obj(obj: &[Model]) {
-    println!("number of models: {}", obj.len());
-    for (i, m) in obj.iter().enumerate() {
-        let mesh = &m.mesh;
-
-        println!("model[{}].name = \'{}\'", i, m.name);
-        println!("model[{}].mesh.material_id = {:?}", i, mesh.material_id);
-
-        println!(
-            "Size of model[{}].face_arities: {}",
-            i,
-            mesh.face_arities.len()
-        );
-
-        let mut next_face = 0;
-        for f in 0..mesh.face_arities.len() {
-            let end = next_face + mesh.face_arities[f] as usize;
-            let face_indices: Vec<_> = mesh.indices[next_face..end].iter().collect();
-            println!("    face[{}] = {:?}", f, face_indices);
-            next_face = end;
-        }
-
-        // Normals and texture coordinates are also loaded, but not printed in this example
-        println!("model[{}].vertices: {}", i, mesh.positions.len() / 3);
-
-        assert_eq!(mesh.positions.len() % 3, 0);
-        for v in 0..mesh.positions.len() / 3 {
-            println!(
-                "    v[{}] = ({}, {}, {})",
-                v,
-                mesh.positions[3 * v],
-                mesh.positions[3 * v + 1],
-                mesh.positions[3 * v + 2]
-            );
-        }
     }
 }
 

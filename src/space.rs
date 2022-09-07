@@ -39,10 +39,10 @@ pub struct Fragment {
 
 impl Fragment {
     pub(crate) fn dot(&self, rhs: Fragment) -> i64 {
-        (self.x * rhs.x) + (self.x * rhs.y)
+        (self.x * rhs.x) + (self.y * rhs.y)
     }
     pub(crate) fn dot_self(&self) -> i64 {
-        (self.x * self.x) + (self.x * self.x)
+        (self.x * self.x) + (self.y * self.y)
     }
 }
 

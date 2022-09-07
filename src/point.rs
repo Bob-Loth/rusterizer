@@ -238,10 +238,10 @@ fn inside_triangle(alpha: f32, beta: f32, gamma: f32) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU32;
-    use crate::Fragment;
     use crate::point::{inside_triangle, Point, Triangle};
     use crate::space::Space;
+    use crate::Fragment;
+    use std::num::NonZeroU32;
 
     #[test]
     fn triangle_creation() {
@@ -265,19 +265,19 @@ mod tests {
             },
         );
         let frags = vec![
-            Fragment{x: 5, y: 5, z: 0.0}, //good
-            Fragment{x: 2, y: 3, z: 0.0}, //bad
-            Fragment{x: 0, y: 0, z: 0.0}, //bad
-            Fragment{x: 5, y: 6, z: 0.0}, //good
-            Fragment{x: 6, y: 5, z: 0.0}  //good
+            Fragment { x: 5, y: 5, z: 0.0 }, //good
+            Fragment { x: 2, y: 3, z: 0.0 }, //bad
+            Fragment { x: 0, y: 0, z: 0.0 }, //bad
+            Fragment { x: 5, y: 6, z: 0.0 }, //good
+            Fragment { x: 6, y: 5, z: 0.0 }, //good
         ];
 
         let mut results: Vec<bool> = vec![];
-        for frag in &frags{
+        for frag in &frags {
             let bary = tri.barycentric_coordinates(frag);
-            println!("{:?}",bary);
-            results.push(inside_triangle(bary.alpha,bary.beta,bary.gamma));
+            println!("{:?}", bary);
+            results.push(inside_triangle(bary.alpha, bary.beta, bary.gamma));
         }
-        assert_eq!(results,vec![true,false,false,true,true]);
+        assert_eq!(results, vec![true, false, false, true, true]);
     }
 }

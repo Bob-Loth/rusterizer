@@ -71,9 +71,7 @@ fn main() {
     for p in &pixels {
         assert!((-1.0f32..=1.0f32).contains(p));
     }
-    assert!(pixels[0] == 1.0);
 
-    assert!(pixels.iter().last().unwrap() == &1.0);
     let mut data = [165u8, 255u8, 214u8, 255u8]
         .repeat((args.image_width.get() * args.image_height.get()) as usize); // An array containing a RGBA sequence.
 

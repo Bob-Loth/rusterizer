@@ -53,6 +53,7 @@ struct Triangle {
     barycentric_constants: BaryCentricConstants,
 }
 
+#[derive(Debug)]
 pub(crate) struct BarycentricResult {
     z: f32,
     alpha: f32,
@@ -80,7 +81,7 @@ impl Triangle {
                 let pac = c - a;
                 let pabac = pab.dot(pac);
 
-                let total_area = (pab.dot_self()) * (pac.dot_self()) - pabac * pabac;
+                let total_area = (pab.dot_self()) * (pac.dot_self()) - (pabac * pabac);
                 BaryCentricConstants {
                     pab,
                     pac,
@@ -205,7 +206,7 @@ fn write_pixel(
         match mode {
             Mode::Depth => color_depth(pixels, frag),
             Mode::Wireframe => {
-                const EPSILON: f32 = 0.03;
+                const EPSILON: f32 = 0.3;
                 if [bary.alpha, bary.beta, bary.gamma]
                     .iter()
                     .all(|&b| f32::abs(b) < EPSILON)
@@ -230,11 +231,53 @@ fn color_depth(pixels: &mut Array2D<f32>, frag: Fragment) {
     }
 }
 
-fn color_wireframe(pixels: &mut Array2D<f64>, frag: Fragment, bary: BarycentricResult) {
-    todo!();
-}
-
 fn inside_triangle(alpha: f32, beta: f32, gamma: f32) -> bool {
     let range = 0f32..=1f32;
     range.contains(&alpha) & range.contains(&beta) & range.contains(&gamma)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU32;
+    use crate::Fragment;
+    use crate::point::{inside_triangle, Point, Triangle};
+    use crate::space::Space;
+
+    #[test]
+    fn triangle_creation() {
+        let space = Space::new(NonZeroU32::new(10).unwrap(), NonZeroU32::new(10).unwrap());
+        let tri = Triangle::new(
+            &space.unwrap(),
+            Point {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point {
+                x: 0.0,
+                y: 10.0,
+                z: 0.0,
+            },
+            Point {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        let frags = vec![
+            Fragment{x: 5, y: 5, z: 0.0}, //good
+            Fragment{x: 2, y: 3, z: 0.0}, //bad
+            Fragment{x: 0, y: 0, z: 0.0}, //bad
+            Fragment{x: 5, y: 6, z: 0.0}, //good
+            Fragment{x: 6, y: 5, z: 0.0}  //good
+        ];
+
+        let mut results: Vec<bool> = vec![];
+        for frag in &frags{
+            let bary = tri.barycentric_coordinates(frag);
+            println!("{:?}",bary);
+            results.push(inside_triangle(bary.alpha,bary.beta,bary.gamma));
+        }
+        assert_eq!(results,vec![true,false,false,true,true]);
+    }
 }

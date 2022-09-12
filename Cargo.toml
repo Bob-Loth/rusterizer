@@ -7,4 +7,4 @@ edition = "2021"
 [dependencies]
 array2d = "0.2.1"
 tobj = "3.2.3"
-png = "0.17.5"
+png = "0.17.6"

@@ -87,9 +87,11 @@ fn main() {
         data[i * 4 + 2] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 2] as f32)) as u8;
         data[i * 4 + 3] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 3] as f32)) as u8;
     }
+    
+    for item in &pixels {
+        println!("{}", item);
+    }
 
-    //assert_eq!(data[0..4],[0,0,0,0]);
-    //assert_eq!(data.get(data.len()-4..).unwrap(),[0,0,0,0]);
     println!("wrote to: {}", args.image_file);
     writer.write_image_data(&data).unwrap(); // Save
 }

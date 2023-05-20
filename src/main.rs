@@ -22,7 +22,7 @@ fn parse_cmd() -> Args {
     match Args::new(std::env::args()) {
         Ok(args) => args,
         Err(e) => {
-            eprintln!("An error occurred during command line parsing: {:#?}", e);
+            eprintln!("An error occurred during command line parsing: {e:#?}");
             eprintln!("{}", Args::help());
             process::exit(1);
         }
@@ -33,7 +33,7 @@ fn parse_cmd() -> Args {
 fn create_space_transforms(width: NonZeroU32, height: NonZeroU32) -> space::Space {
     match space::Space::new(width, height) {
         Ok(space) => space,
-        Err(e) => panic!("An error occurred during view volume creation: {:#?}", e),
+        Err(e) => panic!("An error occurred during view volume creation: {e:#?}"),
     }
 }
 
@@ -52,7 +52,7 @@ fn main() {
         args.image_height.get() as usize,
     );
     //the actual rasterization operation.
-    for model in models.iter() {
+    for model in &models {
         rasterize(
             &mut fragments,
             &space,
@@ -89,7 +89,7 @@ fn main() {
     }
     
     for item in &pixels {
-        println!("{}", item);
+        println!("{item}");
     }
 
     println!("wrote to: {}", args.image_file);

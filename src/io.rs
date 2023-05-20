@@ -119,7 +119,7 @@ mod tests {
     fn wireframe_fully_qualified() {
         let raw_args = vec!["name", "a", "b", "1", "1", "--wireframe"];
         let args = Args::structure_args(&raw_args);
-        assert_eq!(args.unwrap().mode, Mode::Wireframe)
+        assert_eq!(args.unwrap().mode, Mode::Wireframe);
     }
 
     #[test]
@@ -132,8 +132,6 @@ mod tests {
     #[test]
     fn no_args() {
         let args = std::env::args();
-        if Args::new(args).is_ok() {
-            panic!("calling with no arguments should never return an Ok status.")
-        }
+        assert!(Args::new(args).is_err(), "calling with no arguments should never return an Ok status.");
     }
 }

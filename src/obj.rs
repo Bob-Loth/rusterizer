@@ -76,13 +76,12 @@ mod tests {
     fn chunked_access_eq_to_skipping_access() {
         let (obj, _mats) =
             load_obj("./tests/resources/teapot.obj", &LoadOptions::default()).unwrap();
-        for model in obj.iter() {
+        for model in &obj {
             let (min_x, max_x) = get_min_max(model, 0);
             let (min_y, max_y) = get_min_max(model, 1);
             let (min_z, max_z) = get_min_max(model, 2);
             println!(
-                "{} {} {} {} {} {}",
-                min_x, max_x, min_y, max_y, min_z, max_z
+                "{min_x} {max_x} {min_y} {max_y} {min_z} {max_z}"
             );
             assert!(min_x <= max_x);
             assert!(min_y <= max_y);

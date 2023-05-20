@@ -173,15 +173,15 @@ pub fn rasterize(
         })
     {
         //iterate over every pixel in the bounding box
-        write_triangle(pixels, mode, triangle);
+        write_triangle(pixels, mode, &triangle);
     }
 }
 
-fn write_triangle(pixels: &mut Array2D<f32>, mode: Mode, triangle: Triangle) {
+fn write_triangle(pixels: &mut Array2D<f32>, mode: Mode, triangle: &Triangle) {
     for row_idx in triangle.bounding_box.row_range() {
         for column_idx in triangle.bounding_box.column_range() {
             //compute barycentric coordinates, returning an alpha, beta, and gamma value.
-            write_pixel(pixels, mode, &triangle, row_idx, column_idx);
+            write_pixel(pixels, mode, triangle, row_idx, column_idx);
         }
     }
 }

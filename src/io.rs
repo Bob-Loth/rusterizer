@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn no_args() {
         let args = std::env::args();
-        if let Ok(_) = Args::new(args) {
+        if Args::new(args).is_ok() {
             panic!("calling with no arguments should never return an Ok status.")
         }
     }

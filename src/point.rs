@@ -17,20 +17,20 @@ mod barycentric {
     //
     #[derive(Debug)]
     pub(crate) struct BaryCentricConstants {
-        pub(crate) pab: Fragment,
-        pub(crate) pac: Fragment,
+        pub(crate) p_dot_a_dot_b: Fragment,
+        pub(crate) p_dot_a_dot_c: Fragment,
         pub(crate) pabac: i64,
         pub(crate) total_area: i64,
     }
     impl From<&Triangle> for BaryCentricConstants {
         fn from(tri: &Triangle) -> Self {
-            let pab = tri.b - tri.a;
-            let pac = tri.c - tri.a;
-            let pabac = pab.dot(pac);
-            let total_area = (pab.dot_self()) * (pac.dot_self()) - pabac * pabac;
+            let p_dot_a_dot_b = tri.b - tri.a;
+            let p_dot_a_dot_c = tri.c - tri.a;
+            let pabac = p_dot_a_dot_b.dot(p_dot_a_dot_c);
+            let total_area = (p_dot_a_dot_b.dot_self()) * (p_dot_a_dot_c.dot_self()) - pabac * pabac;
             BaryCentricConstants {
-                pab,
-                pac,
+                p_dot_a_dot_b,
+                p_dot_a_dot_c,
                 pabac,
                 total_area,
             }
@@ -77,14 +77,14 @@ impl Triangle {
                 y_max: a.y.max(b.y).max(c.y),
             },
             barycentric_constants: {
-                let pab = b - a;
-                let pac = c - a;
-                let pabac = pab.dot(pac);
+                let p_dot_a_dot_b = b - a;
+                let p_dot_a_dot_c = c - a;
+                let pabac = p_dot_a_dot_b.dot(p_dot_a_dot_c);
 
-                let total_area = (pab.dot_self()) * (pac.dot_self()) - (pabac * pabac);
+                let total_area = (p_dot_a_dot_b.dot_self()) * (p_dot_a_dot_c.dot_self()) - (pabac * pabac);
                 BaryCentricConstants {
-                    pab,
-                    pac,
+                    p_dot_a_dot_b,
+                    p_dot_a_dot_c,
                     pabac,
                     total_area,
                 }
@@ -93,16 +93,16 @@ impl Triangle {
     }
     pub(crate) fn barycentric_coordinates(&self, v: &Fragment) -> BarycentricResult {
         let pav = *v - self.a; //vector from triangle's "a" to a given fragment v
-        let pavab: i64 = pav.dot(self.barycentric_constants.pab);
+        let pavab: i64 = pav.dot(self.barycentric_constants.p_dot_a_dot_b);
 
         //(ac * ac) * (av * ab) - (ab * ac) * (av * ac), with floating-point divide
-        let beta = (self.barycentric_constants.pac.dot_self() * pavab
-            - (self.barycentric_constants.pabac * pav.dot(self.barycentric_constants.pac)))
+        let beta = (self.barycentric_constants.p_dot_a_dot_c.dot_self() * pavab
+            - (self.barycentric_constants.pabac * pav.dot(self.barycentric_constants.p_dot_a_dot_c)))
             as f32
             / self.barycentric_constants.total_area as f32;
         //(ab * ab) * (av * ac) - (ab * ac) * (av * ab), with floating-point divide
-        let gamma = (self.barycentric_constants.pab.dot_self()
-            * pav.dot(self.barycentric_constants.pac)
+        let gamma = (self.barycentric_constants.p_dot_a_dot_b.dot_self()
+            * pav.dot(self.barycentric_constants.p_dot_a_dot_c)
             - self.barycentric_constants.pabac * pavab) as f32
             / self.barycentric_constants.total_area as f32;
         //from a + b + c = 1
@@ -241,11 +241,11 @@ mod tests {
     use crate::point::{inside_triangle, Point, Triangle};
     use crate::space::Space;
     use crate::Fragment;
-    use std::num::NonZeroU32;
+    use std::num::NonZeroU64;
 
     #[test]
     fn triangle_creation() {
-        let space = Space::new(NonZeroU32::new(10).unwrap(), NonZeroU32::new(10).unwrap());
+        let space = Space::new(NonZeroU64::new(10).unwrap(), NonZeroU64::new(10).unwrap());
         let tri = Triangle::new(
             &space.unwrap(),
             Point {
@@ -275,7 +275,7 @@ mod tests {
         let mut results: Vec<bool> = vec![];
         for frag in &frags {
             let bary = tri.barycentric_coordinates(frag);
-            println!("{:?}", bary);
+            println!("{bary:?}");
             results.push(inside_triangle(bary.alpha, bary.beta, bary.gamma));
         }
         assert_eq!(results, vec![true, false, false, true, true]);

@@ -7,7 +7,7 @@ use png::Writer;
 
 use std::fs::File;
 use std::io::BufWriter;
-use std::num::NonZeroU32;
+use std::num::NonZeroU64;
 use std::path::Path;
 use std::process;
 
@@ -30,7 +30,7 @@ fn parse_cmd() -> Args {
 }
 
 //the panic indicates a bug in error-handling for parse_cmd, or in Space's constructor.
-fn create_space_transforms(width: NonZeroU32, height: NonZeroU32) -> space::Space {
+fn create_space_transforms(width: NonZeroU64, height: NonZeroU64) -> space::Space {
     match space::Space::new(width, height) {
         Ok(space) => space,
         Err(e) => panic!("An error occurred during view volume creation: {e:#?}"),
@@ -82,10 +82,19 @@ fn main() {
         // /2   -> [1 , 0]
         // *data-> [255,0]
 
-        data[i * 4] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4] as f32)) as u8;
-        data[i * 4 + 1] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 1] as f32)) as u8;
-        data[i * 4 + 2] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 2] as f32)) as u8;
-        data[i * 4 + 3] = (((-pixels[i] + 1.0) / 2.0) * (data[i * 4 + 3] as f32)) as u8;
+        let one = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4]).unwrap());
+        let two = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4 + 1]).unwrap());
+        let three = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4 + 2]).unwrap());
+        let four = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4 + 3]).unwrap());
+
+        let floats = [one, two, three, four];
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        let bytes = floats.map(|x| x as u8);
+
+        for j in 0..4 {
+            data[i * 4 + j] = bytes[j];
+        }
     }
     
     for item in &pixels {
@@ -93,6 +102,7 @@ fn main() {
     }
 
     println!("wrote to: {}", args.image_file);
+    
     writer.write_image_data(&data).unwrap(); // Save
 }
 
@@ -108,7 +118,7 @@ fn get_writer(args: &Args) -> Writer<BufWriter<File>> {
         process::exit(1);
     }
     let w = BufWriter::new(create.unwrap());
-    let mut encoder = png::Encoder::new(w, args.image_width.get(), args.image_height.get());
+    let mut encoder = png::Encoder::new(w, args.image_width.get().try_into().unwrap(), args.image_height.get().try_into().unwrap());
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455)); // 1.0 / 2.2, scaled by 100000

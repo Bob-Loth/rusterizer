@@ -1,11 +1,11 @@
-use std::num::NonZeroU32;
+use std::num::NonZeroU64;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Args {
     pub(crate) mesh_file: String,
     pub(crate) image_file: String,
-    pub(crate) image_width: NonZeroU32,
-    pub(crate) image_height: NonZeroU32,
+    pub(crate) image_width: NonZeroU64,
+    pub(crate) image_height: NonZeroU64,
     pub(crate) mode: Mode,
 }
 
@@ -31,11 +31,11 @@ impl Args {
         let input_image = args[2].as_ref();
         let width = args[3]
             .as_ref()
-            .parse::<NonZeroU32>()
+            .parse::<NonZeroU64>()
             .map_err(|_| ArgsError::ImageDimensions("width invalid"))?;
         let height = args[4]
             .as_ref()
-            .parse::<NonZeroU32>()
+            .parse::<NonZeroU64>()
             .map_err(|_| ArgsError::ImageDimensions("height invalid"))?;
         let mode = if args.len() == 6 {
             match args[5].as_ref() {
@@ -78,8 +78,8 @@ mod tests {
         let _args = Args {
             mesh_file: String::from("a.obj"),
             image_file: String::from("a.png"),
-            image_width: NonZeroU32::new(1).unwrap(),
-            image_height: NonZeroU32::new(1).unwrap(),
+            image_width: NonZeroU64::new(1).unwrap(),
+            image_height: NonZeroU64::new(1).unwrap(),
             mode: Mode::Wireframe,
         };
     }

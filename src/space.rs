@@ -1,6 +1,6 @@
 use crate::point::Point;
-use std::num::NonZeroU32;
-use SpaceError::Init;
+use std::num::NonZeroU64;
+use Error::Init;
 
 #[derive(Debug)]
 pub struct Space {
@@ -8,12 +8,12 @@ pub struct Space {
     y_transform: Transform,
 }
 #[derive(Debug)]
-pub enum SpaceError {
+pub enum Error {
     Init,
 }
 
 impl Space {
-    pub fn new(width: NonZeroU32, height: NonZeroU32) -> Result<Space, SpaceError> {
+    pub fn new(width: NonZeroU64, height: NonZeroU64) -> Result<Space, Error> {
         let vv = ViewVolume::new(width, height);
         Ok(Space {
             x_transform: Transform::new(width, vv.left, vv.right).map_err(|_| Init)?,
@@ -67,7 +67,7 @@ struct ViewVolume {
 
 impl ViewVolume {
     //width and height
-    fn new(width: NonZeroU32, height: NonZeroU32) -> ViewVolume {
+    fn new(width: NonZeroU64, height: NonZeroU64) -> ViewVolume {
         let h_w = height.get() as f32 / width.get() as f32;
         match (width, height) {
             _ if width < height => ViewVolume {
@@ -91,7 +91,7 @@ impl ViewVolume {
 pub struct Transform {
     pub(crate) shift: f32,
     pub(crate) scale: f32,
-    pub extent: u32,
+    pub extent: u64,
 }
 #[derive(Debug, PartialEq)]
 pub(crate) enum PixelTransformError {
@@ -100,7 +100,7 @@ pub(crate) enum PixelTransformError {
 
 impl Transform {
     fn new(
-        pixel_extent: NonZeroU32,
+        pixel_extent: NonZeroU64,
         vv_min: f32,
         vv_max: f32,
     ) -> Result<Transform, PixelTransformError> {
@@ -125,34 +125,34 @@ impl Transform {
 #[cfg(test)]
 mod tests {
     use crate::space::Transform;
-    use std::num::NonZeroU32;
+    use std::num::NonZeroU64;
 
     mod pixel_transform {
-        use super::{NonZeroU32, Transform};
+        use super::{NonZeroU64, Transform};
         use crate::space::PixelTransformError::BadViewVolume;
         use crate::space::{Space, ViewVolume};
 
         #[test]
         fn pixel_bigger() {
-            let p = Transform::new(NonZeroU32::new(100).unwrap(), -0.5, 0.5).unwrap();
+            let p = Transform::new(NonZeroU64::new(100).unwrap(), -0.5, 0.5).unwrap();
             assert_eq!(p.shift, 50.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 100.0); //the number of pixels divided by the full extent of the viewing volume
         }
         #[test]
         fn pixel_smaller() {
-            let p = Transform::new(NonZeroU32::new(40).unwrap(), -50.0, 50.0).unwrap();
+            let p = Transform::new(NonZeroU64::new(40).unwrap(), -50.0, 50.0).unwrap();
             assert_eq!(p.shift, 20.0); //how many pixels to move over. Starts at 0, ends at pixel_extent - 1.
             assert_eq!(p.scale, 0.4); //the number of pixels divided by the full extent of the viewing volume
         }
         // Occurrence implies a bad implementation of viewing volume, or a programming error in passing its data to PixelTransform::new().
         #[test]
         fn bad_input() {
-            let p = Transform::new(NonZeroU32::new(100).unwrap(), -10.0, 11.0);
+            let p = Transform::new(NonZeroU64::new(100).unwrap(), -10.0, 11.0);
             assert_eq!(p, Err(BadViewVolume))
         }
         #[test]
         fn view_volume_width_bigger() {
-            let vv = ViewVolume::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(50).unwrap());
+            let vv = ViewVolume::new(NonZeroU64::new(100).unwrap(), NonZeroU64::new(50).unwrap());
             assert_ne!(vv.bottom, vv.left);
             assert_eq!(vv.bottom, -1.0);
             assert_eq!(vv.right, 2.0);
@@ -160,7 +160,7 @@ mod tests {
 
         #[test]
         fn view_volume_height_bigger() {
-            let vv = ViewVolume::new(NonZeroU32::new(40).unwrap(), NonZeroU32::new(50).unwrap());
+            let vv = ViewVolume::new(NonZeroU64::new(40).unwrap(), NonZeroU64::new(50).unwrap());
             assert_ne!(vv.bottom, vv.left);
             assert_eq!(vv.bottom, -1.25);
             assert_eq!(vv.right, 1.0);
@@ -175,21 +175,21 @@ mod tests {
 
         #[test]
         fn view_volume_dimensions_same() {
-            let vv = ViewVolume::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(100).unwrap());
+            let vv = ViewVolume::new(NonZeroU64::new(100).unwrap(), NonZeroU64::new(100).unwrap());
             is_square(vv);
         }
 
         #[test]
         fn space_square_init() {
             let space =
-                Space::new(NonZeroU32::new(100).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
+                Space::new(NonZeroU64::new(100).unwrap(), NonZeroU64::new(100).unwrap()).unwrap();
             assert_eq!(space.x_transform.scale, space.y_transform.scale);
             assert_eq!(space.x_transform.shift, space.y_transform.shift);
         }
         #[test]
         fn window_to_pixel() {
             let space =
-                Space::new(NonZeroU32::new(200).unwrap(), NonZeroU32::new(100).unwrap()).unwrap();
+                Space::new(NonZeroU64::new(200).unwrap(), NonZeroU64::new(100).unwrap()).unwrap();
             //assert_eq!(space.x_transform.scale, space.y_transform.scale);
             let dimension_ratio = 2.0;
 

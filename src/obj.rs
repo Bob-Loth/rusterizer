@@ -55,7 +55,7 @@ fn get_max_extent(x: (f32, f32), y: (f32, f32), z: (f32, f32)) -> f32 {
 impl Transform {
     fn from_extent(min: f32, extent: f32) -> Transform {
         Transform {
-            extent: extent as u32,
+            extent: extent as u64,
             scale: 2.0 / extent,
             shift: min + (extent / 2.0),
         }

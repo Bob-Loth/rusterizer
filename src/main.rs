@@ -41,9 +41,9 @@ fn main() {
     let args = parse_cmd();
     let space = create_space_transforms(args.image_width, args.image_height);
     //store triangle's indices and vertex positions into packed data structures.
-    let mut models = get_mesh_data(&args.mesh_file);
+    let models = get_mesh_data(&args.mesh_file);
     //positions proportionally scaled in the range [-1,1]
-    resize_obj(&mut models);
+    
 
     //maintain a z buffer, a 2d structure to store depth information per pixel.
     let mut fragments = Array2D::filled_with(

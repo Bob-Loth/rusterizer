@@ -61,16 +61,24 @@ fn main() {
             args.mode,
         );
     }
-
+    for (i, item) in fragments.elements_column_major_iter().enumerate() {
+            if (item - 1.0f32).abs() < f32::EPSILON {
+                print!("{item:^3}");
+            } else {
+                print!("{:^3}",0);
+            }
+        if i % args.image_width.get() as usize == args.image_width.get() as usize - 1 {
+            println!();
+        }
+    }
+    
     let mut writer = get_writer(&args);
 
     let pixels: Vec<f32> = fragments
-        .elements_row_major_iter()
-        .map(|&f| if f > 1.0 { 1.0 } else { f })
-        .collect();
-    for p in &pixels {
-        assert!((-1.0f32..=1.0f32).contains(p));
-    }
+        .elements_column_major_iter()
+        //.map(|&f| if f > 1.0 { 1.0 } else { f })
+        .copied().collect();
+    
 
     let mut data = [165u8, 255u8, 214u8, 255u8]
         .repeat((args.image_width.get() * args.image_height.get()) as usize); // An array containing a RGBA sequence.
@@ -79,7 +87,7 @@ fn main() {
         //pixels = [-1, 1]
         // -    -> [1 ,-1]
         // +1   -> [2 , 0]
-        // /2   -> [1 , 0]
+        // /2   -> [2 , 0]
         // *data-> [255,0]
 
         let one = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4]).unwrap());
@@ -87,18 +95,21 @@ fn main() {
         let three = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4 + 2]).unwrap());
         let four = ((-pixels[i] + 1.0) / 2.0) * (f32::try_from(data[i * 4 + 3]).unwrap());
 
-        let floats = [one, two, three, four];
+        let floats = [one, two, three, four].map(|f| if f < 0.0{0.0} else {f});
         #[allow(clippy::cast_possible_truncation)]
         #[allow(clippy::cast_sign_loss)]
         let bytes = floats.map(|x| x as u8);
 
-        for j in 0..4 {
+        for j in 0..3 {
             data[i * 4 + j] = bytes[j];
         }
     }
-    
-    for item in &pixels {
-        println!("{item}");
+    println!();
+    for (i,d) in data.iter().step_by(4).enumerate() {
+        print!("{d:^4.2}");
+        if i % args.image_width.get() as usize == args.image_width.get() as usize - 1 {
+            println!();
+        }
     }
 
     println!("wrote to: {}", args.image_file);
@@ -111,7 +122,7 @@ fn get_writer(args: &Args) -> Writer<BufWriter<File>> {
     let create = File::create(path);
     if create.is_err() {
         eprintln!(
-            "an error happened when attempting to {}: {}",
+            "an error happened when attempting to create {}: {}",
             args.image_file,
             create.unwrap_err()
         );

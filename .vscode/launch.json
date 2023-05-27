@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["tests/resources/sphere.obj", "sphere.png", "1000", "1000"],
+            "args": ["tests/resources/tetra.obj", "sphere.png", "100", "100"],
             "cwd": "${workspaceFolder}"
         },
         {

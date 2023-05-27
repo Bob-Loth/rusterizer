@@ -200,14 +200,24 @@ mod tests {
             assert_eq!(space.x_transform.window_to_pixel(min_pic), 0);
             assert_eq!(
                 space.x_transform.window_to_pixel(min_vv),
-                (200f64 * 0.25).round() as i64
+                50
             );
 
             assert_eq!(
                 space.x_transform.window_to_pixel(max_vv),
-                ((200f64 * 0.75).round() as i64)
+                150
             );
             assert_eq!(space.x_transform.window_to_pixel(max_pic), 199);
+            assert_eq!(
+                space.y_transform.window_to_pixel(min_vv),
+                0
+            );
+
+            assert_eq!(
+                space.y_transform.window_to_pixel(max_vv),
+                99
+            );
+            assert_eq!(space.y_transform.window_to_pixel(1.0), 99);
         }
     }
 }
